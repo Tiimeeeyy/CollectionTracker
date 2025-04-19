@@ -1,3 +1,5 @@
+package main;
+
 import config.AppConfig;
 import database.CardRepository;
 import gui.CardGUI;

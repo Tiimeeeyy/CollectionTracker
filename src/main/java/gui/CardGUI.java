@@ -19,10 +19,11 @@ import lombok.extern.java.Log; // Assuming Lombok @Log for java.util.logging
 @Log // Use Lombok logging
 public class CardGUI extends JFrame {
     // Dark mode colors (existing)
-    private static final Color BACKGROUND_COLOR = new Color(30, 30, 30);
-    private static final Color TEXT_COLOR = new Color(220, 220, 220);
-    private static final Color PANEL_COLOR = new Color(50, 50, 50);
-    private static final Color TITLE_COLOR = new Color(255, 255, 255);
+    static final Color PRIMARY_COLOR = new Color(25, 118, 210);
+    static final Color BACKGROUND_COLOR = new Color(30, 30, 30);
+    static final Color TEXT_COLOR = new Color(220, 220, 220);
+    static final Color PANEL_COLOR = new Color(50, 50, 50);
+    static final Color TITLE_COLOR = new Color(255, 255, 255);
     private static final Color BUTTON_COLOR = new Color(70, 130, 180); // Unused?
     private static final Color BUTTON_TEXT_COLOR = new Color(255, 255, 255); // Unused?
     private static final Color BLACK_TEXT_COLOR = new Color(0, 0, 0); // Keep for specific components
