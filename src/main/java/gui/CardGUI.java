@@ -12,93 +12,132 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 // No need for java.net.* imports if APIGet is refactored
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.List;
 import java.util.logging.Level; // Import Level for logging
 import lombok.extern.java.Log; // Assuming Lombok @Log for java.util.logging
 
-@Log // Use Lombok logging
+@Log
 public class CardGUI extends JFrame {
-    // Dark mode colors (existing)
-    static final Color PRIMARY_COLOR = new Color(25, 118, 210);
-    static final Color BACKGROUND_COLOR = new Color(30, 30, 30);
-    static final Color TEXT_COLOR = new Color(220, 220, 220);
-    static final Color PANEL_COLOR = new Color(50, 50, 50);
-    static final Color TITLE_COLOR = new Color(255, 255, 255);
-    private static final Color BUTTON_COLOR = new Color(70, 130, 180); // Unused?
-    private static final Color BUTTON_TEXT_COLOR = new Color(255, 255, 255); // Unused?
-    private static final Color BLACK_TEXT_COLOR = new Color(0, 0, 0); // Keep for specific components
 
-    private JPanel cardContainer;
-    private CardLayout cardLayout;
+    // Theme Colors (consider moving to UIUtils or a dedicated Theme class if they grow)
+    static final Color PRIMARY_COLOR = new Color(25, 118, 210); // Example primary color
+    static final Color BACKGROUND_COLOR = new Color(30, 30, 30); // Dark background
+    static final Color TEXT_COLOR = new Color(220, 220, 220);      // Light text
+    static final Color PANEL_COLOR = new Color(50, 50, 50);       // Slightly lighter panel background
+    static final Color TITLE_COLOR = new Color(255, 255, 255);      // White for titles
+    private static final Color BLACK_TEXT_COLOR = new Color(0, 0, 0); // For components like text fields
 
-    // --- Database Integration Fields ---
-    private final CardRepository cardRepository;
-    private Card currentlyDisplayedCard; // Keep track of the card being shown in the detail view
-    // Reference to the 'search by ID' content panel to update it from search-by-name results
+    private JPanel cardContainer; // The panel holding the different screens (using CardLayout)
+    private CardLayout cardLayout; // The layout manager for switching screens
+    private CardController cardController; // Controller handling logic and navigation
+    private final CardRepository cardRepository; // Database repository
+    private Card currentlyDisplayedCard;
     private JPanel searchByIdContentPanel;
-    // --- End Database Integration Fields ---
 
 
-    // --- Constructor ---
-    public CardGUI(CardRepository cardRepository) { // Accept repository
+    /**
+     * Constructor for CardGUI.
+     * @param cardRepository The initialized CardRepository instance.
+     */
+    public CardGUI(CardRepository cardRepository) {
         this.cardRepository = cardRepository;
-        initUI();
+        initController(); // Initialize controller first
+        initLookAndFeel(); // Apply theme
+        initUI(); // Setup frame and panels
+        currentlyDisplayedCard = null;
     }
 
-    private void initUI() {
-        setTitle("Pokemon Card Collection Tracker");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(800, 600);
-        setLocationRelativeTo(null);
+    /**
+     * Initializes the CardController.
+     */
+    private void initController() {
+        this.cardController = new CardController(cardRepository);
+    }
 
-        // Set dark mode look and feel (existing)
+    /**
+     * Sets the Look and Feel and applies custom theme colors to UIManager defaults.
+     */
+    private void initLookAndFeel() {
         try {
+            // Use system look and feel as a base
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            // Apply custom dark theme colors more consistently
+
+            // Override specific UI defaults for the dark theme
             UIManager.put("Panel.background", BACKGROUND_COLOR);
             UIManager.put("OptionPane.background", BACKGROUND_COLOR);
             UIManager.put("OptionPane.messageForeground", TEXT_COLOR);
             UIManager.put("Label.foreground", TEXT_COLOR);
-            UIManager.put("Button.background", PANEL_COLOR); // Darker button background
-            UIManager.put("Button.foreground", TEXT_COLOR); // Light text on buttons
-            UIManager.put("TextField.background", Color.WHITE); // Keep text fields white for readability
+            UIManager.put("Button.background", PANEL_COLOR); // Use panel color for buttons
+            UIManager.put("Button.foreground", TEXT_COLOR);
+            UIManager.put("Button.select", PRIMARY_COLOR); // Color when button is pressed
+            UIManager.put("TextField.background", Color.WHITE); // Keep text fields light
             UIManager.put("TextField.foreground", BLACK_TEXT_COLOR);
-            UIManager.put("TextArea.background", Color.WHITE); // Keep text areas white
+            UIManager.put("TextField.caretForeground", BLACK_TEXT_COLOR); // Cursor color
+            UIManager.put("TextArea.background", Color.WHITE);
             UIManager.put("TextArea.foreground", BLACK_TEXT_COLOR);
-            UIManager.put("CheckBox.background", BACKGROUND_COLOR); // Checkbox background
-            UIManager.put("CheckBox.foreground", TEXT_COLOR);      // Checkbox text
-            UIManager.put("List.background", PANEL_COLOR); // List background
-            UIManager.put("List.foreground", TEXT_COLOR); // List text
-            UIManager.put("List.selectionBackground", BUTTON_COLOR); // Use button color for selection
-            UIManager.put("List.selectionForeground", BUTTON_TEXT_COLOR);
+            UIManager.put("CheckBox.background", BACKGROUND_COLOR);
+            UIManager.put("CheckBox.foreground", TEXT_COLOR);
+            UIManager.put("List.background", PANEL_COLOR);
+            UIManager.put("List.foreground", TEXT_COLOR);
+            UIManager.put("List.selectionBackground", PRIMARY_COLOR); // Use primary for selection
+            UIManager.put("List.selectionForeground", Color.WHITE);
             UIManager.put("ScrollPane.background", BACKGROUND_COLOR);
             UIManager.put("ScrollPane.border", BorderFactory.createEmptyBorder());
             UIManager.put("Viewport.background", BACKGROUND_COLOR); // Ensure scroll pane viewport is dark
-
+            UIManager.put("ProgressBar.foreground", PRIMARY_COLOR);
+            UIManager.put("ProgressBar.background", PANEL_COLOR);
 
         } catch (Exception e) {
-            log.log(Level.SEVERE, "Failed to set Look and Feel", e);
+            log.log(Level.SEVERE, "Failed to set custom Look and Feel", e);
         }
+    }
 
+    /**
+     * Initializes the main JFrame, CardLayout, and adds all the panels.
+     */
+    private void initUI() {
+        setTitle("Pokemon Card Collection Tracker");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(850, 650); // Slightly larger default size
+        setMinimumSize(new Dimension(600, 400)); // Set a minimum size
+        setLocationRelativeTo(null); // Center on screen
 
-        // Create card layout for multiple screens (existing)
+        // Create the main container panel with CardLayout
         cardLayout = new CardLayout();
         cardContainer = new JPanel(cardLayout);
-        cardContainer.setBackground(BACKGROUND_COLOR);
+        cardContainer.setBackground(BACKGROUND_COLOR); // Ensure container background matches theme
 
-        // Add welcome screen (existing)
-        cardContainer.add(createWelcomeScreen(), "welcome");
+        // --- Instantiate Panels ---
+        // Pass the controller to panels that need it for actions/navigation
+        WelcomePanel welcomePanel = new WelcomePanel(cardController);
+        SearchByIdPanel searchByIdPanel = new SearchByIdPanel(cardController);
+        SearchByNamePanel searchByNamePanel = new SearchByNamePanel(cardController);
+        // New Panels
+        SearchBySetPanel searchBySetPanel = new SearchBySetPanel(cardController);
+        SearchByPokedexPanel searchByPokedexPanel = new SearchByPokedexPanel(cardController);
+        ViewCollectionPanel viewCollectionPanel = new ViewCollectionPanel(cardController);
 
-        // Add search screen (modified to store content panel reference)
-        cardContainer.add(createSearchScreen(), "search");
+        // --- Inject necessary references into Controller ---
+        cardController.setCardContainer(cardContainer);
+        cardController.setCardLayout(cardLayout);
+        cardController.setSearchByIdPanel(searchByIdPanel); // Controller needs this to navigate TO details
 
-        // Add search by name screen (existing)
-        cardContainer.add(createSearchByNameScreen(), "searchByName");
+        // --- Add Panels to CardLayout ---
+        // Use descriptive names for clarity
+        cardContainer.add(welcomePanel, "welcome");
+        cardContainer.add(searchByIdPanel, "search"); // Panel for searching by ID and displaying details
+        cardContainer.add(searchByNamePanel, "searchByName");
+        cardContainer.add(searchBySetPanel, "searchBySet");
+        cardContainer.add(searchByPokedexPanel, "searchByPokedex");
+        cardContainer.add(viewCollectionPanel, "viewCollection");
 
-        // Show welcome screen first (existing)
-        cardLayout.show(cardContainer, "welcome");
-
+        // Add the main container panel to the JFrame
         add(cardContainer);
+
+        // Show the welcome screen initially
+        cardLayout.show(cardContainer, "welcome");
     }
 
     private JPanel createWelcomeScreen() {
@@ -583,8 +622,8 @@ public class CardGUI extends JFrame {
                             for (Card card : cards) {
                                 JPanel listItemPanel = createCardListItem(card); // Get the panel for the card
                                 // Add listener to each item to show details
-                                listItemPanel.addMouseListener(new java.awt.event.MouseAdapter() {
-                                    public void mouseClicked(java.awt.event.MouseEvent evt) {
+                                listItemPanel.addMouseListener(new MouseAdapter() {
+                                    public void mouseClicked(MouseEvent evt) {
                                         currentlyDisplayedCard = card; // Set the selected card as current
                                         // Update the content panel on the "Search by ID" screen
                                         updateContentPanel(searchByIdContentPanel, createCardDisplayPanel(card));

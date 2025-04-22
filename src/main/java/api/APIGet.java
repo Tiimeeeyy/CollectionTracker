@@ -83,7 +83,7 @@ public class APIGet {
                 });
         return cardMono.toFuture();
     }
-
+    // Find by set
     public static CompletableFuture<List<Card>> queryCardsBySet(String set) {
         List<Card> cachedResults = APICache.getSearchResults(set);
         if (cachedResults != null) {
@@ -106,6 +106,25 @@ public class APIGet {
                     return Mono.empty();
                 });
         return cardMono.toFuture();
+    }
+    // Find by pokedex (range)
+    public static CompletableFuture<List<Card>> pokedexSearch(int startingRange, int endingRange) {
+        String queryString = "nationalPokedexNumbers:[" + startingRange + " TO " + endingRange + "]";
+        Mono<List<Card>> cardmono = client.get().uri(uriBuilder -> uriBuilder.path("/cards")
+                        .queryParam("q", queryString).build()).retrieve()
+                .bodyToMono(ListResponseWrapper.class).map(ListResponseWrapper::getData)
+                .doOnSuccess(results -> {
+                    if (results != null) {
+                        log.info(String.format("Successfully fetched %s cards or query '%s'", results.size(), queryString));
+                    } else {
+                        log.warning("Fetched card list was null for query: " + queryString);
+                    }
+                }).doOnError(e -> log.log(Level.SEVERE, "Error querying for cards: {0}", e.getMessage()))
+                .onErrorResume(e -> {
+                    log.log(Level.SEVERE, "API call failed for query: {0}", e.getMessage());
+                    return Mono.empty();
+                });
+        return cardmono.toFuture();
     }
 }
 
